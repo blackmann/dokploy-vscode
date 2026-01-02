@@ -3,15 +3,13 @@
   "displayName": "Dokploy",
   "description": "Monitor Dokploy deployments and logs directly in VS Code",
   "version": "0.0.1",
-  "publisher": "blackmann",
+  "publisher": "degreat",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
-  ],
-  "activationEvents": [
-    "onView:dokployDeployments"
   ],
   "main": "./dist/extension.js",
   "contributes": {

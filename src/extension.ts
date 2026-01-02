@@ -71,7 +71,17 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('dokploy.viewRuntimeLogs', async (app: Application) => {
-      vscode.window.showInformationMessage(`Runtime logs for ${app.name} - Coming soon`);
+      const client = deploymentsProvider.getClient();
+      if (!client) {
+        vscode.window.showErrorMessage('Not connected to Dokploy server');
+        return;
+      }
+
+      try {
+        await logsWebview.showRuntimeLogs(app, client);
+      } catch (error) {
+        vscode.window.showErrorMessage(`Failed to fetch runtime logs: ${error}`);
+      }
     }),
 
     vscode.commands.registerCommand('dokploy.openInBrowser', async (app: Application) => {

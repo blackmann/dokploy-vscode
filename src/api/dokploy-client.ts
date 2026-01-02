@@ -1,13 +1,13 @@
-import * as https from 'https';
 import * as http from 'http';
+import * as https from 'https';
 import { URL } from 'url';
-import {
-  Project,
-  Application,
-  Deployment,
-  Container
-} from '../types/dokploy';
 import { log } from '../services/logger';
+import {
+    Application,
+    Container,
+    Deployment,
+    Project
+} from '../types/dokploy';
 
 export class DokployClient {
   constructor(
@@ -48,6 +48,27 @@ export class DokployClient {
     const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     return {
       url: `${protocol}//${url.host}/listen-deployment?logPath=${encodeURIComponent(logPath)}`,
+      headers: {
+        'x-api-key': this.apiKey
+      }
+    };
+  }
+
+  getRuntimeLogWsConfig(containerId: string, tail: number, serverId?: string): { url: string; headers: Record<string, string> } {
+    const url = new URL(this.endpoint);
+    const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const params = new URLSearchParams({
+      containerId,
+      tail: tail.toString(),
+      since: 'all',
+      search: '',
+      runType: 'native'
+    });
+    if (serverId) {
+      params.set('serverId', serverId);
+    }
+    return {
+      url: `${protocol}//${url.host}/docker-container-logs?${params.toString()}`,
       headers: {
         'x-api-key': this.apiKey
       }
