@@ -27,6 +27,10 @@
         {
           "id": "dokployDeployments",
           "name": "Deployments"
+        },
+        {
+          "id": "dokployServers",
+          "name": "Servers"
         }
       ]
     },
@@ -55,13 +59,7 @@
         "icon": "$(link-external)",
         "category": "Dokploy"
       },
-      {
-        "command": "dokploy.configure",
-        "title": "Configure",
-        "icon": "$(gear)",
-        "category": "Dokploy"
-      },
-      {
+            {
         "command": "dokploy.addServer",
         "title": "Add Server",
         "icon": "$(add)",
@@ -77,6 +75,18 @@
         "command": "dokploy.showOutput",
         "title": "Show Output",
         "icon": "$(output)",
+        "category": "Dokploy"
+      },
+      {
+        "command": "dokploy.deleteServer",
+        "title": "Delete Server",
+        "icon": "$(trash)",
+        "category": "Dokploy"
+      },
+      {
+        "command": "dokploy.setActiveServer",
+        "title": "Set as Active",
+        "icon": "$(check)",
         "category": "Dokploy"
       }
     ],
@@ -111,6 +121,49 @@
         {
           "command": "dokploy.viewRuntimeLogs",
           "when": "view == dokployDeployments && viewItem == application"
+        },
+        {
+          "command": "dokploy.deleteServer",
+          "when": "view == dokployServers && viewItem == server",
+          "group": "inline"
+        },
+        {
+          "command": "dokploy.setActiveServer",
+          "when": "view == dokployServers && viewItem == server"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "dokploy.refresh",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.viewLogs",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.viewRuntimeLogs",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.openInBrowser",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.redeploy",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.showOutput",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.deleteServer",
+          "when": "false"
+        },
+        {
+          "command": "dokploy.setActiveServer",
+          "when": "false"
         }
       ]
     },
@@ -140,6 +193,11 @@
           "type": "number",
           "default": 30,
           "description": "Auto-refresh interval in seconds"
+        },
+        "dokploy.activeServerId": {
+          "type": "string",
+          "default": "",
+          "description": "ID of the currently active server"
         }
       }
     }

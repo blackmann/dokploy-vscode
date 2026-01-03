@@ -32,6 +32,7 @@ export interface Application {
   buildPath?: string;
   domains?: Domain[];
   projectId: string;
+  environmentId?: string;
   serverId?: string;
 }
 

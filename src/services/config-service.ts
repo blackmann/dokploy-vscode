@@ -17,9 +17,14 @@ export class ConfigService {
 
   async addServer(server: DokployServerConfig, apiKey: string): Promise<void> {
     const servers = this.getServers();
+    const isFirstServer = servers.length === 0;
     servers.push(server);
     await this.updateServers(servers);
     await this.secrets.store(`${API_KEY_PREFIX}${server.id}`, apiKey);
+
+    if (isFirstServer) {
+      await this.setActiveServerId(server.id);
+    }
   }
 
   async updateServer(server: DokployServerConfig, apiKey?: string): Promise<void> {
@@ -38,6 +43,11 @@ export class ConfigService {
     const servers = this.getServers().filter(s => s.id !== serverId);
     await this.updateServers(servers);
     await this.secrets.delete(`${API_KEY_PREFIX}${serverId}`);
+
+    if (this.getActiveServerId() === serverId) {
+      const newActive = servers.length > 0 ? servers[0].id : undefined;
+      await this.setActiveServerId(newActive);
+    }
   }
 
   async getApiKey(serverId: string): Promise<string | undefined> {
@@ -47,6 +57,24 @@ export class ConfigService {
   getRefreshInterval(): number {
     const config = vscode.workspace.getConfiguration('dokploy');
     return config.get<number>('refreshInterval', 30);
+  }
+
+  getActiveServerId(): string | undefined {
+    const config = vscode.workspace.getConfiguration('dokploy');
+    return config.get<string>('activeServerId');
+  }
+
+  async setActiveServerId(serverId: string | undefined): Promise<void> {
+    const config = vscode.workspace.getConfiguration('dokploy');
+    await config.update('activeServerId', serverId, vscode.ConfigurationTarget.Global);
+  }
+
+  getActiveServer(): DokployServerConfig | undefined {
+    const activeId = this.getActiveServerId();
+    if (!activeId) {
+      return undefined;
+    }
+    return this.getServers().find(s => s.id === activeId);
   }
 
   private async updateServers(servers: DokployServerConfig[]): Promise<void> {
@@ -61,6 +89,18 @@ export class ConfigService {
     });
     if (!name) {
       return undefined;
+    }
+
+    const existingServer = this.getServers().find(s => s.name === name);
+    if (existingServer) {
+      const override = await vscode.window.showWarningMessage(
+        `A server named "${name}" already exists. Override it?`,
+        'Yes',
+        'No'
+      );
+      if (override !== 'Yes') {
+        return undefined;
+      }
     }
 
     const endpoint = await vscode.window.showInputBox({
@@ -86,6 +126,15 @@ export class ConfigService {
     });
     if (!apiKey) {
       return undefined;
+    }
+
+    if (existingServer) {
+      const updatedServer: DokployServerConfig = {
+        ...existingServer,
+        endpoint: endpoint.replace(/\/$/, '')
+      };
+      await this.updateServer(updatedServer, apiKey);
+      return updatedServer;
     }
 
     const server: DokployServerConfig = {

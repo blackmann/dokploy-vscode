@@ -44,74 +44,69 @@ export class DeploymentsProvider implements vscode.TreeDataProvider<DeploymentIt
   async initialize(): Promise<void> {
     log('Initializing deployments provider...');
 
+    this.client = undefined;
+    this.matchedEnvironments = [];
+
     this.repoInfo = await this.gitService.getRepositoryInfo();
     log('Git repository info:', this.repoInfo);
 
-    const servers = this.configService.getServers();
-    log('Configured servers:', servers.map(s => ({ id: s.id, name: s.name, endpoint: s.endpoint })));
-
-    if (servers.length === 0) {
-      log('No servers configured, skipping initialization');
+    const server = this.configService.getActiveServer();
+    if (!server) {
+      log('No active server configured, skipping initialization');
+      this.refresh();
       return;
     }
 
-    for (const server of servers) {
-      log(`Checking server: ${server.name} (${server.endpoint})`);
+    log(`Using active server: ${server.name} (${server.endpoint})`);
 
-      const apiKey = await this.configService.getApiKey(server.id);
-      if (!apiKey) {
-        log(`No API key found for server ${server.name}`);
-        continue;
-      }
-
-      log(`API key found for server ${server.name} (length: ${apiKey.length})`);
-
-      const client = new DokployClient(server.endpoint, apiKey);
-
-      try {
-        log(`Fetching projects from ${server.endpoint}...`);
-        const projects = await client.getProjects();
-        log(`Fetched ${projects.length} projects`);
-
-        for (const project of projects) {
-          const applications = project.environments.flatMap(env => env.applications)
-          log(`Project: ${project.name}`, {
-            projectId: project.projectId,
-            applicationsCount: applications.length || 0,
-          });
-
-          for (const app of applications || []) {
-            log(`  Application: ${app.name}`, {
-              applicationId: app.applicationId,
-              repository: app.repository,
-              owner: app.owner,
-              branch: app.branch
-            });
-          }
-        }
-
-        const matched = this.findMatchingEnvironments(projects);
-
-        if (matched.length > 0) {
-          const totalApps = matched.reduce((sum, env) => sum + env.applications.length, 0);
-          log(`Matched ${totalApps} application(s) across ${matched.length} environment(s):`, matched.map(env => ({
-            environment: env.environment.name,
-            applications: env.applications.map(app => app.name)
-          })));
-          this.client = client;
-          this.matchedEnvironments = matched;
-          break;
-        } else {
-          log('No matching application found on this server');
-        }
-      } catch (error) {
-        log(`Error fetching from server ${server.name}:`, error);
-        continue;
-      }
+    const apiKey = await this.configService.getApiKey(server.id);
+    if (!apiKey) {
+      log(`No API key found for server ${server.name}`);
+      this.refresh();
+      return;
     }
 
-    if (this.matchedEnvironments.length === 0) {
-      log('No matching application found on any server');
+    log(`API key found for server ${server.name} (length: ${apiKey.length})`);
+
+    const client = new DokployClient(server.endpoint, apiKey);
+
+    try {
+      log(`Fetching projects from ${server.endpoint}...`);
+      const projects = await client.getProjects();
+      log(`Fetched ${projects.length} projects`);
+
+      for (const project of projects) {
+        const applications = project.environments.flatMap(env => env.applications)
+        log(`Project: ${project.name}`, {
+          projectId: project.projectId,
+          applicationsCount: applications.length || 0,
+        });
+
+        for (const app of applications || []) {
+          log(`  Application: ${app.name}`, {
+            applicationId: app.applicationId,
+            repository: app.repository,
+            owner: app.owner,
+            branch: app.branch
+          });
+        }
+      }
+
+      const matched = this.findMatchingEnvironments(projects);
+
+      if (matched.length > 0) {
+        const totalApps = matched.reduce((sum, env) => sum + env.applications.length, 0);
+        log(`Matched ${totalApps} application(s) across ${matched.length} environment(s):`, matched.map(env => ({
+          environment: env.environment.name,
+          applications: env.applications.map(app => app.name)
+        })));
+        this.client = client;
+        this.matchedEnvironments = matched;
+      } else {
+        log('No matching application found on this server');
+      }
+    } catch (error) {
+      log(`Error fetching from server ${server.name}:`, error);
     }
 
     this.refresh();
@@ -136,7 +131,6 @@ export class DeploymentsProvider implements vscode.TreeDataProvider<DeploymentIt
 
         for (const app of env.applications) {
           const matches = this.gitService.matchesRepository(app.repository, app.owner, this.repoInfo);
-          log(`Comparing: ${app.owner}/${app.repository} vs ${this.repoInfo.owner}/${this.repoInfo.repo} = ${matches}`);
           if (matches) {
             matchedApps.push(app);
           }
@@ -187,8 +181,8 @@ export class DeploymentsProvider implements vscode.TreeDataProvider<DeploymentIt
       );
       item.description = 'Click to configure';
       item.command = {
-        command: 'dokploy.configure',
-        title: 'Configure'
+        command: 'dokploy.addServer',
+        title: 'Add Server'
       };
       return [item];
     }
@@ -253,7 +247,7 @@ export class DeploymentsProvider implements vscode.TreeDataProvider<DeploymentIt
     try {
       const deployments = await this.client.getDeployments(app.applicationId);
 
-      return deployments.slice(0, 10).map(deployment => {
+      return deployments.slice(0, 15).map(deployment => {
         const item = new DeploymentItem(
           deployment.title || `Deploy ${deployment.deploymentId.slice(0, 8)}`,
           vscode.TreeItemCollapsibleState.None,

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DeploymentsProvider } from './providers/deployments-provider';
+import { ServerItem, ServersProvider } from './providers/servers-provider';
 import { ConfigService } from './services/config-service';
 import { GitService } from './services/git-service';
 import { initLogger, log, showOutput } from './services/logger';
@@ -17,11 +18,16 @@ export async function activate(context: vscode.ExtensionContext) {
   const configService = new ConfigService(context);
   const gitService = new GitService();
   const deploymentsProvider = new DeploymentsProvider(configService, gitService);
+  const serversProvider = new ServersProvider(configService);
   const logsWebview = new LogsWebview(context.extensionUri);
 
-  const treeView = vscode.window.createTreeView('dokployDeployments', {
+  const deploymentsTreeView = vscode.window.createTreeView('dokployDeployments', {
     treeDataProvider: deploymentsProvider,
     showCollapseAll: true
+  });
+
+  const serversTreeView = vscode.window.createTreeView('dokployServers', {
+    treeDataProvider: serversProvider
   });
 
   await deploymentsProvider.initialize();
@@ -30,7 +36,8 @@ export async function activate(context: vscode.ExtensionContext) {
   log('Dokploy extension activated');
 
   context.subscriptions.push(
-    treeView,
+    deploymentsTreeView,
+    serversTreeView,
     vscode.commands.registerCommand('dokploy.refresh', () => {
       log('Manual refresh triggered');
       deploymentsProvider.refresh();
@@ -43,20 +50,18 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('dokploy.addServer', async () => {
       const server = await configService.promptAddServer();
       if (server) {
+        serversProvider.refresh();
         await deploymentsProvider.initialize();
         vscode.window.showInformationMessage(`Added server: ${server.name}`);
       }
     }),
 
-    vscode.commands.registerCommand('dokploy.configure', async () => {
-      const server = await configService.promptSelectServer();
-      if (server) {
-        await deploymentsProvider.initialize();
-      }
-    }),
-
-    vscode.commands.registerCommand('dokploy.viewLogs', async (deployment: Deployment) => {
+    vscode.commands.registerCommand('dokploy.viewLogs', async (arg: Deployment | { data: Deployment}) => {
       const client = deploymentsProvider.getClient();
+
+      const deployment = 'data' in arg ? arg.data : arg
+
+      log('arg', deployment)
       if (!client || !deployment.logPath) {
         vscode.window.showErrorMessage('Unable to fetch logs');
         return;
@@ -84,19 +89,28 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    vscode.commands.registerCommand('dokploy.openInBrowser', async (app: Application) => {
-      console.log('domains....', app.domains)
-      if (app.domains && app.domains.length > 0) {
-        const domain = app.domains[0];
-        const protocol = domain.https ? 'https' : 'http';
-        const url = `${protocol}://${domain.host}`;
-        vscode.env.openExternal(vscode.Uri.parse(url));
-      } else {
-        vscode.window.showWarningMessage('No domain configured for this application');
+    vscode.commands.registerCommand('dokploy.openInBrowser', async (arg: Application | { data: Application }) => {
+      const server = configService.getActiveServer();
+      if (!server) {
+        vscode.window.showErrorMessage('No active server configured');
+        return;
       }
+
+      const app = 'data' in arg ? arg.data : arg
+
+      if (!app.environmentId) {
+        vscode.window.showErrorMessage('Missing environment information for this application');
+        return;
+      }
+
+      const serverUrl = server.endpoint.replace(/\/api$/, '');
+      const url = `${serverUrl}/dashboard/project/${app.projectId}/environment/${app.environmentId}/services/application/${app.applicationId}`;
+      log('Opening in browser:', url);
+      vscode.env.openExternal(vscode.Uri.parse(url));
     }),
 
-    vscode.commands.registerCommand('dokploy.redeploy', async (app: Application) => {
+    vscode.commands.registerCommand('dokploy.redeploy', async (arg: Application | { data: Application}) => {
+      const app = 'data' in arg ? arg.data : arg
       const client = deploymentsProvider.getClient();
       if (!client) {
         vscode.window.showErrorMessage('Not connected to Dokploy server');
@@ -118,6 +132,27 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage(`Failed to redeploy: ${error}`);
         }
       }
+    }),
+
+    vscode.commands.registerCommand('dokploy.deleteServer', async (item: ServerItem) => {
+      const confirm = await vscode.window.showWarningMessage(
+        `Delete server "${item.server.name}"?`,
+        'Yes',
+        'No'
+      );
+
+      if (confirm === 'Yes') {
+        await configService.removeServer(item.server.id);
+        serversProvider.refresh();
+        await deploymentsProvider.initialize();
+      }
+    }),
+
+    vscode.commands.registerCommand('dokploy.setActiveServer', async (item: ServerItem) => {
+      await configService.setActiveServerId(item.server.id);
+      serversProvider.refresh();
+      await deploymentsProvider.initialize();
+      vscode.window.showInformationMessage(`Active server: ${item.server.name}`);
     }),
 
     { dispose: () => logsWebview.dispose() }
