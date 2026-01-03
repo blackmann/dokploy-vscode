@@ -4,6 +4,9 @@
   "description": "Monitor Dokploy deployments and logs directly in VS Code",
   "version": "0.0.1",
   "publisher": "degreat",
+  "repository": {
+    "url": "https://github.com/blackmann/dokploy-vscode"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"

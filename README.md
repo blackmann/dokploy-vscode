@@ -56,10 +56,6 @@ The extension will automatically detect and display matching applications in the
 
 Issues and PRs welcome! See the [GitHub repository](https://github.com/blackmann/dokploy-vscode).
 
-## License
-
-[MIT](LICENSE)
-
 ---
 
 Built for [Dokploy](https://dokploy.com) 🚀
