@@ -34,18 +34,6 @@ Monitor [Dokploy](https://dokploy.com) deployments and logs directly in VS Code.
 
 The extension will automatically detect and display matching applications in the sidebar.
 
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `Dokploy: Refresh` | Refresh the deployments list |
-| `Dokploy: Add Server` | Add a new Dokploy server |
-| `Dokploy: Configure` | Select or configure servers |
-| `Dokploy: View Logs` | View deployment build logs |
-| `Dokploy: View Runtime Logs` | View container runtime logs |
-| `Dokploy: Redeploy` | Trigger a redeployment |
-| `Dokploy: Open in Browser` | Open application URL |
-
 ## Configuration
 
 | Setting | Default | Description |
