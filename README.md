@@ -1,12 +1,14 @@
 # Dokploy
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/degreat.dokploy-vscode?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=degreat.dokploy-vscode)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/degreat.dokploy-vscode)](https://marketplace.visualstudio.com/items?itemName=degreat.dokploy-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Monitor [Dokploy](https://dokploy.com) deployments and logs directly in VS Code.
 
 ![Screenshot](assets/screenshot.png)
+
+## Installation
+
+Download VSIX from [Releases](https://github.com/blackmann/dokploy-vscode/releases) page and install via the command: `Install from VSIX` on vscode or any vscode fork.
 
 ## Features
 
